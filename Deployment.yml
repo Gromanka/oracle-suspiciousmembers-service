@@ -1,0 +1,150 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oracle-suspiciousmembers-service
+  namespace: altyn-aml
+  labels:
+    app: oracle-suspiciousmembers-service
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: oracle-suspiciousmembers-service
+
+  template:
+    metadata:
+      labels:
+        app: oracle-suspiciousmembers-service
+
+    spec:
+      imagePullSecrets:
+        - name: regcred
+
+      containers:
+        - name: oracle-suspiciousmembers-service
+          image: IMAGE_PLACEHOLDER
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 8081
+
+          env:
+            - name: SERVER_PORT
+              value: "8081"
+            - name: SAVE_RISK_FROM_ORACLE
+              value: "true"
+            # Database Oracle
+            - name: DB_URL
+              value: "jdbc:oracle:thin:@185.206.34.11:1522:ORCL"
+
+            - name: DB_USERNAME
+              value: "AML_USER_ALTYN"
+
+            - name: DB_PASSWORD
+              value: "AML_USER_ALTYN"
+
+            - name: DB_DRIVER
+              value: "oracle.jdbc.OracleDriver"
+
+            - name: DB_SCHEMA_USER
+              value: "AML_USER_ALTYN"
+
+            # Database POSTGRES
+            - name: POSTGRES_URL
+              value: "jdbc:postgresql://10.207.22.4:5432/adviser-altyn"
+
+            - name: POSTGRES_USERNAME
+              value: "aml"
+
+            - name: POSTGRES_PASSWORD
+              value: "aml"
+
+            - name: POSTGRES_DRIVER
+              value: "org.postgresql.Driver"
+
+            # Jackson
+            - name: JACKSON_WRITE_DATES
+              value: "false"
+
+            - name: JACKSON_CASE_INSENSITIVE
+              value: "true"
+
+            # Swagger / Springdoc
+            - name: SWAGGER_ENABLED
+              value: "true"
+
+            - name: SWAGGER_UI_ENABLED
+              value: "true"
+
+            # Helper URLs
+
+            - name: clientCardServiceUL
+              value: "http://clients-service:8078/v5/clientCard/setClientUL"
+
+            - name: clientCardServiceFL
+              value: "http://clients-service:8078/v5/clientCard/setClientFL"
+
+            - name: clientCardServiceIP
+              value: "http://clients-service:8078/v5/clientCard/setClientIP"
+
+            - name: clientCardServiceRole
+              value: "http://clients-service:8078/v5/clientCard/setClientRole"
+
+            # Logging
+            - name: LOG_LEVEL_ROOT
+              value: "INFO"
+
+            - name: APP_LOG_LEVEL
+              value: "INFO"
+
+            - name: SERVER_SERVLET_CONTEXT_PATH
+              value: "/v8"
+
+            - name: SPRINGDOC_SWAGGER_UI_PATH
+              value: "/swagger-ui.html"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oracle-suspiciousmembers-service
+  namespace: altyn-aml
+  labels:
+    app: oracle-suspiciousmembers-service
+
+spec:
+  selector:
+    app: oracle-suspiciousmembers-service
+
+  ports:
+    - protocol: TCP
+      port: 8081
+      targetPort: 8081
+
+  type: ClusterIP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: oracle-suspiciousmembers-service
+  namespace: altyn-aml
+  labels:
+    app: oracle-suspiciousmembers-service
+
+spec:
+  ingressClassName: nginx
+
+  rules:
+    - host: oracle-suspiciousmembers-service.p-s.kz
+      http:
+        paths:
+          - path: /v8
+            pathType: Prefix
+            backend:
+              service:
+                name: oracle-suspiciousmembers-service
+                port:
+                  number: 8081
